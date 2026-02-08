@@ -1,0 +1,51 @@
+# Python / Virtual Env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+.venv/
+venv/
+env/
+
+# Dependencies
+Pipfile.lock
+poetry.lock
+
+# Django / Framework
+*.log
+*.pot
+staticfiles/
+media/*
+!media/profile_pics/default.png
+
+# Environment Variables
+.env
+.env.*
+
+# Git
+.git/
+.gitignore
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing / Coverage
+.coverage
+htmlcov/
+pytest_cache/
+.pytest_cache/
+
+# Docker
+docker-compose*.yml
+Dockerfile*
+DOCKER.md
+SETUP.md
+CREDENTIALS.md
+
+# OS
+.DS_Store
+Thumbs.db

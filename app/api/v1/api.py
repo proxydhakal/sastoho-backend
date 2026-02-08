@@ -1,0 +1,20 @@
+from fastapi import APIRouter
+from app.api.v1.routers import auth, users, products, cart, wishlist, orders, payments, reviews, admin, product_images, site_config, promo, addresses, pages, contact, newsletter
+
+api_router = APIRouter()
+api_router.include_router(site_config.router, tags=["site-config"])
+api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
+api_router.include_router(users.router, prefix="/users", tags=["users"])
+api_router.include_router(addresses.router, prefix="/addresses", tags=["addresses"])
+api_router.include_router(products.router, prefix="/catalog", tags=["catalog"])
+api_router.include_router(cart.router, prefix="/cart", tags=["cart"])
+api_router.include_router(wishlist.router, prefix="/wishlist", tags=["wishlist"])
+api_router.include_router(orders.router, prefix="/orders", tags=["orders"])
+api_router.include_router(payments.router, prefix="/payments", tags=["payments"])
+api_router.include_router(reviews.router, prefix="/products", tags=["reviews"])
+api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
+api_router.include_router(product_images.router, prefix="/catalog", tags=["product-images"])
+api_router.include_router(promo.router, prefix="/promo", tags=["promo"])
+api_router.include_router(pages.router, prefix="/pages", tags=["pages"])
+api_router.include_router(contact.router, prefix="/contact", tags=["contact"])
+api_router.include_router(newsletter.router, prefix="/newsletter", tags=["newsletter"])

@@ -1,0 +1,6 @@
+@echo off
+echo Starting Migrations...
+venv\Scripts\alembic.exe upgrade head
+
+echo Starting Uvicorn...
+venv\Scripts\uvicorn.exe app.main:app --host 0.0.0.0 --port 8000 --reload
