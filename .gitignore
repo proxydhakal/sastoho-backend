@@ -10,7 +10,6 @@ env/
 *.log
 *.sqlite
 celerybeat-schedule
-*.txt
 cgi-bin/
 passenger_wsgi.py
 public/
