@@ -23,9 +23,9 @@ def upgrade() -> None:
     op.create_table(
         'permission',
         sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('name', sa.String(), nullable=False),
-        sa.Column('codename', sa.String(), nullable=False),
-        sa.Column('description', sa.String(), nullable=True),
+        sa.Column('name', sa.String(255), nullable=False),
+        sa.Column('codename', sa.String(100), nullable=False),
+        sa.Column('description', sa.String(500), nullable=True),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.PrimaryKeyConstraint('id')
@@ -38,8 +38,8 @@ def upgrade() -> None:
     op.create_table(
         'usergroup',
         sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('name', sa.String(), nullable=False),
-        sa.Column('description', sa.String(), nullable=True),
+        sa.Column('name', sa.String(255), nullable=False),
+        sa.Column('description', sa.String(500), nullable=True),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.PrimaryKeyConstraint('id')

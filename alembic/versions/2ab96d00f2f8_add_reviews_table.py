@@ -24,7 +24,7 @@ def upgrade() -> None:
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('product_id', sa.Integer(), nullable=False),
     sa.Column('rating', sa.Integer(), nullable=False),
-    sa.Column('comment', sa.String(), nullable=True),
+    sa.Column('comment', sa.String(2000), nullable=True),
     sa.Column('is_approved', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),

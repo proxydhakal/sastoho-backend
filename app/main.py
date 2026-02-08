@@ -4,6 +4,11 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.api.v1.api import api_router
 
+# Disable OpenAPI docs in production when DEBUG is False
+_docs_url = None if (settings.is_production and not settings.DEBUG) else "/docs"
+_redoc_url = None if (settings.is_production and not settings.DEBUG) else "/redoc"
+_openapi_url = None if (settings.is_production and not settings.DEBUG) else f"{settings.API_V1_STR}/openapi.json"
+
 app = FastAPI(
     title="E-Commerce API",
     description="A production-ready e-commerce backend API built with FastAPI, SQLAlchemy (Async), and Stripe.",
@@ -12,20 +17,16 @@ app = FastAPI(
         "name": "Admin",
         "email": "admin@example.com",
     },
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    debug=settings.DEBUG,
+    openapi_url=_openapi_url,
+    docs_url=_docs_url,
+    redoc_url=_redoc_url,
 )
 
-# CORS middleware - must be added before routers
+# CORS: use config (CORS_ORIGINS in .env; production should set exact frontend URL(s))
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:8090",  # Docker frontend (Nginx)
-        "http://localhost:5173",  # Vite dev server (default)
-        "http://localhost:5174",  # Vite dev server (alternative port)
-        "http://localhost:3000",  # Alternative dev port
-        "http://127.0.0.1:5173",  # Vite dev server (127.0.0.1)
-        "http://127.0.0.1:5174",  # Vite dev server (127.0.0.1 alternative)
-    ],
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],

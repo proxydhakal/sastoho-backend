@@ -12,6 +12,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import text
+from sqlalchemy import inspect as sa_inspect
 
 revision: str = "a7c8d9e0f1a2"
 down_revision: Union[str, None] = "f2b3c4d5e6f7"
@@ -27,10 +28,14 @@ def _random_order_number() -> str:
 
 
 def upgrade() -> None:
-    op.add_column("order", sa.Column("order_number", sa.String(8), nullable=True))
-    # Backfill existing orders: unique 8-char alphanumeric per row
     conn = op.get_bind()
-    result = conn.execute(text('SELECT id FROM "order" WHERE order_number IS NULL'))
+    inspector = sa_inspect(conn)
+    columns = [c["name"] for c in inspector.get_columns("order")]
+    if "order_number" not in columns:
+        op.add_column("order", sa.Column("order_number", sa.String(8), nullable=True))
+    # Backfill existing orders: unique 8-char alphanumeric per row
+    order_table = "`order`" if conn.dialect.name == "mysql" else '"order"'
+    result = conn.execute(text(f"SELECT id FROM {order_table} WHERE order_number IS NULL"))
     rows = result.fetchall()
     used = set()
     for (order_id,) in rows:
@@ -39,9 +44,16 @@ def upgrade() -> None:
             if code not in used:
                 used.add(code)
                 break
-        conn.execute(text('UPDATE "order" SET order_number = :code WHERE id = :id'), {"code": code, "id": order_id})
-    op.alter_column("order", "order_number", nullable=False)
-    op.create_index(op.f("ix_order_order_number"), "order", ["order_number"], unique=True)
+        conn.execute(text(f"UPDATE {order_table} SET order_number = :code WHERE id = :id"), {"code": code, "id": order_id})
+    op.alter_column(
+        "order",
+        "order_number",
+        nullable=False,
+        existing_type=sa.String(8),
+    )
+    index_names = [idx["name"] for idx in inspector.get_indexes("order")]
+    if op.f("ix_order_order_number") not in index_names:
+        op.create_index(op.f("ix_order_order_number"), "order", ["order_number"], unique=True)
 
 
 def downgrade() -> None:
