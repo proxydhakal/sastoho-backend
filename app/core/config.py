@@ -62,7 +62,7 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "uploads"
 
     # ---------- CORS (comma-separated origins; production: set to your frontend URL(s)) ----------
-    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:8090,http://127.0.0.1:5173,http://localhost:3000"
+    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:8090,http://127.0.0.1:5173,http://localhost:3000,https://sastoho.store,https://www.sastoho.store"
 
     # ---------- Logging ----------
     LOG_LEVEL: str = "INFO"  # DEBUG, INFO, WARNING, ERROR
