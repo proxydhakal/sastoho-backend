@@ -202,6 +202,7 @@ class CRUDProduct(CRUDBase[Product, ProductCreate, ProductCreate]):
             selectinload(Product.images)
         )
         # Use .is_(True) for MySQL boolean compatibility (converts to = 1)
+        # Filter only active products
         stmt = stmt.filter(Product.is_active.is_(True))
 
         if category_id:
@@ -219,12 +220,12 @@ class CRUDProduct(CRUDBase[Product, ProductCreate, ProductCreate]):
             stmt = stmt.filter(search_filter)
         
         if flash_deals_only:
-            now = datetime.now(timezone.utc)
-            # Show all products where is_flash_deal is True
+            # Show all products where is_flash_deal is True (regardless of dates)
             # Dates are for display/countdown purposes only, not for filtering
             stmt = stmt.filter(Product.is_flash_deal.is_(True))
             # Order by: active deals first (end date >= now), then expired deals, then no dates
             from sqlalchemy import case, and_
+            now = datetime.now(timezone.utc)
             stmt = stmt.order_by(
                 case(
                     (

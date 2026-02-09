@@ -118,10 +118,9 @@ async def read_products(
     trending_bool = str_to_bool(trending_only)
     
     # Debug logging (remove in production if needed)
-    if settings.DEBUG:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.debug(f"Product filter - flash_deals_only: {flash_deals_only} -> {flash_deals_bool}, trending_only: {trending_only} -> {trending_bool}")
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"Product filter - flash_deals_only: {flash_deals_only} (type: {type(flash_deals_only)}) -> {flash_deals_bool}, trending_only: {trending_only} (type: {type(trending_only)}) -> {trending_bool}")
     
     products = await product_service.get_multi_with_filtering(
         db, 

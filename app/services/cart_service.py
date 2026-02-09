@@ -101,11 +101,14 @@ class CartService:
     async def merge_carts(self, db: AsyncSession, session_id: str, user_id: int) -> Cart:
         """
         Merge session cart into user cart.
+        Combines quantities for matching items, moves unique items to user cart.
         """
+        # Get carts with items loaded
         user_cart = await self.get_cart(db, user_id=user_id)
         session_cart = await self.get_cart(db, session_id=session_id)
         
-        if not session_cart:
+        if not session_cart or not session_cart.items:
+            # No session cart or empty session cart
             if not user_cart:
                 user_cart = await self.create_cart(db, user_id=user_id)
             return user_cart
@@ -116,30 +119,31 @@ class CartService:
             session_cart.session_id = None
             db.add(session_cart)
             await db.commit()
-            return session_cart
+            await db.refresh(session_cart)
+            # Reload with relationships
+            return await self.get_cart(db, user_id=user_id)
         
-        # Determine items to merge
-        for s_item in session_cart.items:
-            # Check if item exists in user cart
-            u_item = next((i for i in user_cart.items if i.product_variant_id == s_item.product_variant_id), None)
-            if u_item:
+        # Merge items: combine quantities for matching variants, move unique items
+        user_item_map = {item.product_variant_id: item for item in user_cart.items}
+        
+        for s_item in list(session_cart.items):  # Use list() to avoid modification during iteration
+            if s_item.product_variant_id in user_item_map:
+                # Item exists in user cart - merge quantities
+                u_item = user_item_map[s_item.product_variant_id]
                 u_item.quantity += s_item.quantity
                 db.add(u_item)
+                # Delete the session item
+                await db.delete(s_item)
             else:
-                # Move item to user cart including copying if needed?
-                # Changing cart_id works if attached to session.
+                # Item doesn't exist in user cart - move it
                 s_item.cart_id = user_cart.id
                 db.add(s_item)
         
-        # Delete session cart (items were moved or re-mapped)
+        # Delete the empty session cart
         await db.delete(session_cart)
-        
-        user_cart_id = user_cart.id
         await db.commit()
         
-        db.expire_all()
-        stmt = select(Cart).filter(Cart.id == user_cart_id).options(selectinload(Cart.items).selectinload(CartItem.variant).selectinload(ProductVariant.product).selectinload(Product.images))
-        result = await db.execute(stmt)
-        return result.scalars().first()
+        # Return refreshed user cart with all relationships
+        return await self.get_cart(db, user_id=user_id)
 
 cart_service = CartService()
