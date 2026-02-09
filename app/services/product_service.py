@@ -220,12 +220,24 @@ class CRUDProduct(CRUDBase[Product, ProductCreate, ProductCreate]):
         
         if flash_deals_only:
             now = datetime.now(timezone.utc)
-            stmt = stmt.filter(
-                Product.is_flash_deal.is_(True),
-                Product.flash_deal_start <= now,
-                Product.flash_deal_end >= now
+            # Show all products where is_flash_deal is True
+            # Dates are for display/countdown purposes only, not for filtering
+            stmt = stmt.filter(Product.is_flash_deal.is_(True))
+            # Order by: active deals first (end date >= now), then expired deals, then no dates
+            from sqlalchemy import case, and_
+            stmt = stmt.order_by(
+                case(
+                    (
+                        and_(
+                            Product.flash_deal_end.isnot(None),
+                            Product.flash_deal_end >= now
+                        ),
+                        0  # Active deals first
+                    ),
+                    else_=1  # Expired or no dates second
+                ),
+                Product.flash_deal_end.asc().nulls_last()  # Within each group, order by end date
             )
-            stmt = stmt.order_by(Product.flash_deal_end.asc())  # Ending soon first
 
         if trending_only:
             stmt = stmt.filter(Product.is_trending.is_(True))
