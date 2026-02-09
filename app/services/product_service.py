@@ -101,7 +101,18 @@ class CRUDProduct(CRUDBase[Product, ProductCreate, ProductCreate]):
             description=obj_in.description,
             is_active=obj_in.is_active,
             category_id=obj_in.category_id,
-            slug=unique_slug
+            slug=unique_slug,
+            # Flash Deal fields
+            is_flash_deal=obj_in.is_flash_deal,
+            flash_deal_start=obj_in.flash_deal_start,
+            flash_deal_end=obj_in.flash_deal_end,
+            flash_deal_price=obj_in.flash_deal_price,
+            # Discount fields
+            discount_percentage=obj_in.discount_percentage,
+            discount_amount=obj_in.discount_amount,
+            # Trending field
+            is_trending=obj_in.is_trending,
+            view_count=obj_in.view_count,
         )
         db.add(db_obj)
         
