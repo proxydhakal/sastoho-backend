@@ -114,9 +114,21 @@ class OrderService:
         if not shipping_address_data:
             raise ValueError("Shipping address is required. Provide either shipping_address or shipping_address_id")
 
-        # 6. Create Order
+        # 6. Generate unique order number BEFORE creating the order
+        order_number = None
+        for _ in range(20):  # Try up to 20 times to find a unique order number
+            code = _generate_order_number()
+            existing = await db.execute(select(Order).where(Order.order_number == code))
+            if existing.scalar_one_or_none() is None:
+                order_number = code
+                break
+        if not order_number:
+            raise ValueError("Could not generate unique order number after multiple attempts")
+
+        # 7. Create Order with order_number
         order = Order(
             user_id=user_id,
+            order_number=order_number,
             status="pending",
             total_amount=final_amount,
             shipping_address=shipping_address_data,
@@ -128,16 +140,6 @@ class OrderService:
             discount_amount=discount_amount if discount_amount > 0 else None,
         )
         db.add(order)
-        await db.commit()
-        await db.refresh(order)
-        for _ in range(10):
-            code = _generate_order_number()
-            existing = await db.execute(select(Order).where(Order.order_number == code))
-            if existing.scalar_one_or_none() is None:
-                order.order_number = code
-                break
-        else:
-            raise ValueError("Could not generate unique order number")
         await db.commit()
         await db.refresh(order)
 
