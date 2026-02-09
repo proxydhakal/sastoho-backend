@@ -1,10 +1,11 @@
-from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException, status, Body, UploadFile, File
+from typing import Any, List, Union
+from fastapi import APIRouter, Depends, HTTPException, status, Body, UploadFile, File, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.dependencies.auth import get_current_user, get_current_active_user, get_current_admin_user
 from app.core.database import get_db
 from app.core.storage import save_category_image
+from app.core.query_params import str_to_bool
 from app.schemas.product import Category, CategoryCreate, CategoryUpdate, Product, ProductCreate, ProductUpdate
 from app.services.product_service import category_service, product_service
 from app.models.user import User
@@ -102,13 +103,19 @@ async def read_products(
     search: str = None,
     category_id: int = None,
     category_slug: str = None,
-    flash_deals_only: bool = False,
-    trending_only: bool = False,
+    flash_deals_only: Union[str, bool, int] = Query(False, description="Filter flash deals only. Accepts: 1/0, true/false"),
+    trending_only: Union[str, bool, int] = Query(False, description="Filter trending products only. Accepts: 1/0, true/false"),
     db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
     Retrieve products with optional filtering.
+    Query parameters flash_deals_only and trending_only accept: "1"/"0", "true"/"false", or boolean values.
+    In production (MySQL), these are converted to 1/0 for database storage.
     """
+    # Convert query parameters to boolean (handles "1"/"0", "true"/"false", etc.)
+    flash_deals_bool = str_to_bool(flash_deals_only)
+    trending_bool = str_to_bool(trending_only)
+    
     products = await product_service.get_multi_with_filtering(
         db, 
         skip=skip, 
@@ -116,8 +123,8 @@ async def read_products(
         search=search, 
         category_id=category_id,
         category_slug=category_slug,
-        flash_deals_only=flash_deals_only,
-        trending_only=trending_only
+        flash_deals_only=flash_deals_bool,
+        trending_only=trending_bool
     )
     # Debug: Log image data for first few products
     for p in products[:5]:

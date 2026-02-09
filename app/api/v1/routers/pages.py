@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, List, Union
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -7,6 +7,7 @@ from app.models.page import Page
 from app.api.v1.dependencies.auth import get_current_active_user, get_current_user_optional
 from app.core.database import get_db
 from app.core.storage import save_content_image
+from app.core.query_params import str_to_bool
 from app.models.user import User
 from app.schemas.page import Page, PageCreate, PageUpdate
 from app.services.page_service import page_service
@@ -17,20 +18,25 @@ router = APIRouter()
 async def get_pages(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
-    published_only: bool = Query(True),
+    published_only: Union[str, bool, int] = Query(True, description="Filter published pages only. Accepts: 1/0, true/false"),
     search: str = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User | None = Depends(get_current_user_optional),
 ) -> Any:
     """
     Get all pages. Published only by default for non-authenticated users. Optional search by title or slug.
+    Query parameter published_only accepts: "1"/"0", "true"/"false", or boolean values.
+    In production (MySQL), these are converted to 1/0 for database storage.
     """
+    # Convert query parameter to boolean (handles "1"/"0", "true"/"false", etc.)
+    published_only_bool = str_to_bool(published_only)
+    
     # If user is admin, allow seeing unpublished pages
     if current_user and current_user.is_superuser:
-        published_only = False
+        published_only_bool = False
 
     pages = await page_service.get_all(
-        db, skip=skip, limit=limit, published_only=published_only, search=search
+        db, skip=skip, limit=limit, published_only=published_only_bool, search=search
     )
     return pages
 
