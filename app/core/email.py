@@ -12,14 +12,19 @@ from app.core.email_templates import (
     order_completed_email_html,
 )
 
+# Port 465 uses SSL/TLS, port 587 uses STARTTLS
+# For port 465: MAIL_SSL_TLS=True, MAIL_STARTTLS=False
+# For port 587: MAIL_STARTTLS=True, MAIL_SSL_TLS=False
+use_ssl = settings.EMAIL_PORT == 465
+
 conf = ConnectionConfig(
     MAIL_USERNAME=settings.EMAIL_HOST_USER,
     MAIL_PASSWORD=settings.EMAIL_HOST_PASSWORD,
     MAIL_FROM=settings.FROM_EMAIL,
     MAIL_PORT=settings.EMAIL_PORT,
     MAIL_SERVER=settings.EMAIL_HOST,
-    MAIL_STARTTLS=True,
-    MAIL_SSL_TLS=False,
+    MAIL_STARTTLS=not use_ssl,  # STARTTLS for port 587
+    MAIL_SSL_TLS=use_ssl,  # SSL/TLS for port 465
     USE_CREDENTIALS=True,
     VALIDATE_CERTS=True,
 )
