@@ -104,8 +104,8 @@ async def read_products(
     search: str = None,
     category_id: int = None,
     category_slug: str = None,
-    flash_deals_only: Union[str, bool, int] = Query(False, description="Filter flash deals only. Accepts: 1/0, true/false"),
-    trending_only: Union[str, bool, int] = Query(False, description="Filter trending products only. Accepts: 1/0, true/false"),
+    flash_deals_only: Union[str, bool, int] = Query(default=False, description="Filter flash deals only. Accepts: 1/0, true/false"),
+    trending_only: Union[str, bool, int] = Query(default=False, description="Filter trending products only. Accepts: 1/0, true/false"),
     db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
@@ -132,6 +132,12 @@ async def read_products(
         flash_deals_only=flash_deals_bool,
         trending_only=trending_bool
     )
+    
+    # Enhanced debug logging
+    logger.info(f"Returning {len(products)} products to client")
+    if len(products) == 0 and flash_deals_bool:
+        logger.warning(f"No products found with flash_deals_only=True. Check database for products with is_flash_deal=1 and is_active=1")
+    
     # Debug: Log image data for first few products
     for p in products[:5]:
         if hasattr(p, 'images'):

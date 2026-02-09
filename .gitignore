@@ -19,3 +19,4 @@ cgi-bin/
 passenger_wsgi.py
 public/
 tmp/
+uploads/

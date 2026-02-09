@@ -204,6 +204,11 @@ class CRUDProduct(CRUDBase[Product, ProductCreate, ProductCreate]):
         # Use .is_(True) for MySQL boolean compatibility (converts to = 1)
         # Filter only active products
         stmt = stmt.filter(Product.is_active.is_(True))
+        
+        # Debug: Log active filter
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Applied is_active filter - only showing active products")
 
         if category_id:
             stmt = stmt.filter(Product.category_id == category_id)
@@ -222,10 +227,25 @@ class CRUDProduct(CRUDBase[Product, ProductCreate, ProductCreate]):
         if flash_deals_only:
             # Show all products where is_flash_deal is True (regardless of dates)
             # Dates are for display/countdown purposes only, not for filtering
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"Applying flash_deals_only filter - flash_deals_only={flash_deals_only} (type: {type(flash_deals_only)})")
+            
+            # Filter by is_flash_deal = True (MySQL stores as 1)
+            # Use .is_(True) for MySQL boolean compatibility
             stmt = stmt.filter(Product.is_flash_deal.is_(True))
+            
+            logger.info(f"Flash deals filter applied - filtering for is_flash_deal=True")
+            
             # Order by: active deals first (end date >= now), then expired deals, then no dates
+            # MySQL doesn't support NULLS LAST, so use CASE to handle NULLs
             from sqlalchemy import case, and_
             now = datetime.now(timezone.utc)
+            # MySQL-compatible ordering: use CASE to put NULLs at the end
+            # Order by: active deals first (end date >= now), then expired deals, then no dates (NULLs)
+            # MySQL-compatible ordering without NULLS LAST
+            # Use CASE to prioritize: active deals (0), expired deals (1), no dates (2)
+            # Then order by created_at desc as fallback
             stmt = stmt.order_by(
                 case(
                     (
@@ -235,9 +255,16 @@ class CRUDProduct(CRUDBase[Product, ProductCreate, ProductCreate]):
                         ),
                         0  # Active deals first
                     ),
-                    else_=1  # Expired or no dates second
+                    (
+                        and_(
+                            Product.flash_deal_end.isnot(None),
+                            Product.flash_deal_end < now
+                        ),
+                        1  # Expired deals second
+                    ),
+                    else_=2  # No dates (NULLs) last
                 ),
-                Product.flash_deal_end.asc().nulls_last()  # Within each group, order by end date
+                Product.created_at.desc()  # Fallback ordering by creation date
             )
 
         if trending_only:
@@ -249,8 +276,20 @@ class CRUDProduct(CRUDBase[Product, ProductCreate, ProductCreate]):
             stmt = stmt.order_by(Product.created_at.desc())
         
         stmt = stmt.offset(skip).limit(limit)
+        
+        # Debug logging
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Executing product query - flash_deals_only={flash_deals_only}, trending_only={trending_only}, skip={skip}, limit={limit}")
+        
         result = await db.execute(stmt)
-        return result.scalars().all()
+        products = result.scalars().all()
+        
+        logger.info(f"Found {len(products)} products matching criteria")
+        if products:
+            logger.info(f"First product: id={products[0].id}, name={products[0].name}, is_flash_deal={products[0].is_flash_deal}, is_active={products[0].is_active}")
+        
+        return products
     
     async def increment_view_count(self, db: AsyncSession, product_id: int) -> None:
         """Increment view count for a product (for trending calculation)."""
