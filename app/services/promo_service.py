@@ -20,9 +20,10 @@ class CRUDPromoCode(CRUDBase[PromoCode, PromoCodeCreate, PromoCodeUpdate]):
         """Validate a promo code and calculate discount."""
         now = datetime.now(timezone.utc)
         
+        # Use is_(True) for MySQL compatibility (SQLAlchemy handles boolean conversion)
         stmt = select(PromoCode).filter(
-            PromoCode.code == code.upper(),
-            PromoCode.is_active == True,
+            PromoCode.code == code.upper().strip(),
+            PromoCode.is_active.is_(True),
             PromoCode.valid_from <= now,
             PromoCode.valid_until >= now
         )

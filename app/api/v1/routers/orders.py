@@ -126,6 +126,9 @@ async def create_order(
     """
     Create new order from current cart. Sends order-confirmation email to customer.
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
     try:
         order = await order_service.create_order(db, user_id=current_user.id, order_in=order_in)
         try:
@@ -144,11 +147,14 @@ async def create_order(
                 site_title=site_title,
             )
         except Exception as e:
-            import logging
-            logging.getLogger(__name__).exception("Failed to send order confirmation email: %s", e)
+            logger.exception("Failed to send order confirmation email: %s", e)
         return order
     except ValueError as e:
+        logger.error("Order creation validation error: %s", e)
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("Order creation failed: %s", e)
+        raise HTTPException(status_code=500, detail=f"Order creation failed: {str(e)}")
 
 @router.get("/", response_model=List[Order])
 async def read_orders(

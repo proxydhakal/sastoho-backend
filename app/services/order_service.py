@@ -60,14 +60,21 @@ class OrderService:
         discount_amount = Decimal("0.00")
         promo_code_id = None
         if order_in.promo_code and order_in.promo_code.strip():
-            validation = await promo_code_service.validate_promo_code(
-                db, code=order_in.promo_code.strip(), total_amount=total_amount, user_id=user_id
-            )
-            if validation.valid and validation.discount_amount is not None:
-                discount_amount = validation.discount_amount
-                if validation.promo_code:
-                    promo_code_id = validation.promo_code.id
-            # If invalid, we proceed without discount (no error, ignore bad code)
+            try:
+                validation = await promo_code_service.validate_promo_code(
+                    db, code=order_in.promo_code.strip(), total_amount=total_amount, user_id=user_id
+                )
+                if validation.valid and validation.discount_amount is not None:
+                    discount_amount = validation.discount_amount
+                    if validation.promo_code:
+                        promo_code_id = validation.promo_code.id
+                # If invalid, we proceed without discount (no error, ignore bad code)
+            except Exception as e:
+                # Log promo code validation error but don't fail the order
+                import logging
+                logging.getLogger(__name__).warning(f"Promo code validation error: {e}. Proceeding without discount.")
+                discount_amount = Decimal("0.00")
+                promo_code_id = None
 
         final_amount = total_amount - discount_amount
         if final_amount < 0:
@@ -91,18 +98,21 @@ class OrderService:
             stmt_addr = select(Address).filter(Address.id == order_in.shipping_address_id)
             result_addr = await db.execute(stmt_addr)
             address = result_addr.scalars().first()
-            if address and address.user_id == user_id:
-                shipping_address_data = {
-                    "full_name": address.full_name,
-                    "phone_number": address.phone_number,
-                    "street": address.street,
-                    "city": address.city,
-                    "state": address.state,
-                    "postal_code": address.postal_code,
-                    "country": address.country,
-                }
+            if not address:
+                raise ValueError(f"Shipping address with ID {order_in.shipping_address_id} not found")
+            if address.user_id != user_id:
+                raise ValueError("Shipping address does not belong to the current user")
+            shipping_address_data = {
+                "full_name": address.full_name,
+                "phone_number": address.phone_number,
+                "street": address.street,
+                "city": address.city,
+                "state": address.state,
+                "postal_code": address.postal_code,
+                "country": address.country,
+            }
         if not shipping_address_data:
-            raise ValueError("Shipping address is required")
+            raise ValueError("Shipping address is required. Provide either shipping_address or shipping_address_id")
 
         # 6. Create Order
         order = Order(
