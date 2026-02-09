@@ -190,7 +190,8 @@ class CRUDProduct(CRUDBase[Product, ProductCreate, ProductCreate]):
             selectinload(Product.variants).selectinload(ProductVariant.images),
             selectinload(Product.images)
         )
-        stmt = stmt.filter(Product.is_active == True)
+        # Use .is_(True) for MySQL boolean compatibility (converts to = 1)
+        stmt = stmt.filter(Product.is_active.is_(True))
 
         if category_id:
             stmt = stmt.filter(Product.category_id == category_id)
@@ -209,14 +210,14 @@ class CRUDProduct(CRUDBase[Product, ProductCreate, ProductCreate]):
         if flash_deals_only:
             now = datetime.now(timezone.utc)
             stmt = stmt.filter(
-                Product.is_flash_deal == True,
+                Product.is_flash_deal.is_(True),
                 Product.flash_deal_start <= now,
                 Product.flash_deal_end >= now
             )
             stmt = stmt.order_by(Product.flash_deal_end.asc())  # Ending soon first
 
         if trending_only:
-            stmt = stmt.filter(Product.is_trending == True)
+            stmt = stmt.filter(Product.is_trending.is_(True))
             stmt = stmt.order_by(Product.view_count.desc())
 
         # Default: latest first (by created_at)

@@ -6,6 +6,7 @@ from app.api.v1.dependencies.auth import get_current_user, get_current_active_us
 from app.core.database import get_db
 from app.core.storage import save_category_image
 from app.core.query_params import str_to_bool
+from app.core.config import settings
 from app.schemas.product import Category, CategoryCreate, CategoryUpdate, Product, ProductCreate, ProductUpdate
 from app.services.product_service import category_service, product_service
 from app.models.user import User
@@ -115,6 +116,12 @@ async def read_products(
     # Convert query parameters to boolean (handles "1"/"0", "true"/"false", etc.)
     flash_deals_bool = str_to_bool(flash_deals_only)
     trending_bool = str_to_bool(trending_only)
+    
+    # Debug logging (remove in production if needed)
+    if settings.DEBUG:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.debug(f"Product filter - flash_deals_only: {flash_deals_only} -> {flash_deals_bool}, trending_only: {trending_only} -> {trending_bool}")
     
     products = await product_service.get_multi_with_filtering(
         db, 
