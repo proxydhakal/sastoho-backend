@@ -14,6 +14,7 @@ from app.models.address import Address
 from app.models.page import Page
 from app.models.contact_submission import ContactSubmission
 from app.models.newsletter_subscriber import NewsletterSubscriber
+from app.models.verification_otp import VerificationOtp
 
 __all__ = [
     'User',
@@ -38,4 +39,5 @@ __all__ = [
     'Page',
     'ContactSubmission',
     'NewsletterSubscriber',
+    'VerificationOtp',
 ]

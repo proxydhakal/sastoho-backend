@@ -188,13 +188,14 @@ async def send_verification_otp(
     Used after signup and for resend when user is unverified.
     """
     from app.core import email as email_utils
-    from app.core.otp_store import generate_otp, set_otp
+    from app.core.otp_store import generate_otp
+    from app.services.otp_service import set_otp_db
     from app.api.v1.routers.site_config import get_or_create_site_config
 
-    user = await user_service.get_by_email(db, email=email)
+    user = await user_service.get_by_email_insensitive(db, email=email)
     if user and not user.is_verified:
         otp = generate_otp(6)
-        await set_otp(email=user.email, otp=otp)
+        await set_otp_db(db, email=user.email, otp=otp)
         site_config = await get_or_create_site_config(db)
         await email_utils.send_verification_otp_email(
             email_to=user.email,
@@ -216,9 +217,9 @@ async def verify_otp(
     """
     Verify email using OTP sent to user's email.
     """
-    from app.core.otp_store import get_and_delete_otp
+    from app.services.otp_service import get_and_delete_otp_db
 
-    otp_stored = await get_and_delete_otp(email=email)
+    otp_stored = await get_and_delete_otp_db(db, email=email)
     if not otp_stored or otp_stored != (otp or "").strip():
         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
 
