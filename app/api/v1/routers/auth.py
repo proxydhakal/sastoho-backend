@@ -85,7 +85,7 @@ async def login_access_token(
     user_schema = await _user_to_schema(db, user.id)
     if not user_schema:
         raise HTTPException(status_code=500, detail="User not found after login")
-    return LoginResponse(user=user_schema)
+    return LoginResponse(user=user_schema, access_token=access_token, refresh_token=refresh_token)
 
 
 @router.post("/refresh", response_model=LoginResponse)
@@ -93,11 +93,12 @@ async def refresh_tokens(
     request: Request,
     response: Response,
     db: AsyncSession = Depends(get_db),
+    body_refresh_token: str | None = Body(None, embed=True, alias="refresh_token"),
 ) -> Any:
     """
-    Refresh access token using refresh token from HTTP-only cookie. Sets new cookies. Call with credentials.
+    Refresh access token using refresh token from cookie or request body (for Bearer-only clients).
     """
-    refresh_token = request.cookies.get(settings.COOKIE_REFRESH_TOKEN_NAME)
+    refresh_token = request.cookies.get(settings.COOKIE_REFRESH_TOKEN_NAME) or body_refresh_token
     if not refresh_token:
         raise HTTPException(status_code=401, detail="Refresh token missing")
     
@@ -126,7 +127,7 @@ async def refresh_tokens(
     if not user_schema:
         _clear_auth_cookies(response)
         raise HTTPException(status_code=401, detail="User not found")
-    return LoginResponse(user=user_schema)
+    return LoginResponse(user=user_schema, access_token=new_access, refresh_token=new_refresh)
 
 
 @router.post("/logout")

@@ -9,8 +9,10 @@ class Token(BaseModel):
 
 
 class LoginResponse(BaseModel):
-    """Returned on login when using HTTP-only cookies; tokens are in Set-Cookie."""
+    """Returned on login. Tokens in Set-Cookie and optionally in body for clients that send Bearer."""
     user: "User"
+    access_token: Optional[str] = None
+    refresh_token: Optional[str] = None
 
 class TokenPayload(BaseModel):
     sub: Optional[str] = None
