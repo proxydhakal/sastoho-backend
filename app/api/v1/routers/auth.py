@@ -219,10 +219,10 @@ async def verify_otp(
     from app.core.otp_store import get_and_delete_otp
 
     otp_stored = await get_and_delete_otp(email=email)
-    if not otp_stored or otp_stored != otp.strip():
+    if not otp_stored or otp_stored != (otp or "").strip():
         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
 
-    user = await user_service.get_by_email(db, email=email)
+    user = await user_service.get_by_email_insensitive(db, email=email)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     if user.is_verified:

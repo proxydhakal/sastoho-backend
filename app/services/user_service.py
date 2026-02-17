@@ -1,6 +1,7 @@
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import func
 from app.models.user import User
 from app.schemas.user import UserCreate
 from app.core import security
@@ -8,6 +9,15 @@ from app.core import security
 class UserService:
     async def get_by_email(self, db: AsyncSession, email: str) -> Optional[User]:
         result = await db.execute(select(User).filter(User.email == email))
+        return result.scalars().first()
+
+    async def get_by_email_insensitive(self, db: AsyncSession, email: str) -> Optional[User]:
+        """Find user by email ignoring case (e.g. for OTP verification)."""
+        if not (email or "").strip():
+            return None
+        result = await db.execute(
+            select(User).filter(func.lower(User.email) == (email or "").strip().lower())
+        )
         return result.scalars().first()
     
     async def create_user(self, db: AsyncSession, user_in: UserCreate) -> User:

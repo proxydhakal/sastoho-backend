@@ -4,7 +4,9 @@ Application settings with environment-aware config.
 - ENVIRONMENT=production -> MySQL, DEBUG default False, strict CORS/cookies
 """
 from typing import List, Optional
-from pydantic import field_validator
+from urllib.parse import quote_plus
+
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import URL
 
@@ -42,7 +44,12 @@ class Settings(BaseSettings):
     MYSQL_PORT: int = 3306
     MYSQL_DB: Optional[str] = None
 
-    REDIS_URL: str = "redis://localhost:6379/0"
+    # Redis: set REDIS_URL directly, or use REDIS_HOST + REDIS_PORT + REDIS_PASSWORD (REDIS_URL is built from these if set)
+    REDIS_URL: Optional[str] = None
+    REDIS_HOST: str = "127.0.0.1"
+    REDIS_PORT: int = 6379
+    REDIS_PASSWORD: Optional[str] = None
+    REDIS_DB: int = 0
 
     # ---------- Email ----------
     EMAIL_HOST: str = "localhost"
@@ -73,6 +80,21 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return v.strip().lower()
         return v
+
+    @model_validator(mode="after")
+    def build_redis_url(self) -> "Settings":
+        """If REDIS_URL is not set, build it from REDIS_HOST, REDIS_PORT, REDIS_PASSWORD, REDIS_DB."""
+        if self.REDIS_URL:
+            return self
+        auth = ""
+        if self.REDIS_PASSWORD:
+            auth = f":{quote_plus(self.REDIS_PASSWORD)}@"
+        object.__setattr__(
+            self,
+            "REDIS_URL",
+            f"redis://{auth}{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}",
+        )
+        return self
 
     @property
     def is_production(self) -> bool:
