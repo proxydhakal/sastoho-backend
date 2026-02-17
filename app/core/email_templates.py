@@ -63,6 +63,27 @@ def verification_email_html(
     return _base_html("Verify Your Email", body, logo_url, site_title)
 
 
+def verification_otp_email_html(
+    recipient_name: str,
+    otp: str,
+    logo_url: str | None = None,
+    site_title: str = "SastoHo",
+    expire_minutes: int = 10,
+) -> str:
+    """Email verification OTP after signup."""
+    body = f"""
+    <p style="margin:0 0 16px;">Dear {recipient_name or 'Customer'},</p>
+    <p style="margin:0 0 16px;">Thank you for signing up! Use the OTP below to verify your email address in the app.</p>
+    <div style="margin:24px 0;padding:24px;background:{LIGHT_BG};border-left:4px solid {ACCENT_COLOR};border-radius:8px;text-align:center;">
+      <p style="margin:0 0 8px;font-size:12px;color:#6b7280;letter-spacing:2px;">YOUR VERIFICATION CODE</p>
+      <p style="margin:0;font-size:32px;font-weight:800;letter-spacing:8px;color:{PRIMARY_COLOR};">{otp}</p>
+    </div>
+    <p style="margin:0 0 16px;color:#6b7280;font-size:14px;">If you did not create an account, please ignore this email.</p>
+    <p style="margin:0;">This code expires in {expire_minutes} minutes.</p>
+    """
+    return _base_html("Verify Your Email", body, logo_url, site_title)
+
+
 def password_reset_email_html(
     recipient_name: str,
     reset_link: str,

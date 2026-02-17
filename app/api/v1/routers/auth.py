@@ -74,7 +74,7 @@ async def login_access_token(
     if not user.is_verified:
         raise HTTPException(
             status_code=400,
-            detail="Please verify your email before logging in. Check your inbox for the verification link.",
+            detail="Please verify your email before logging in. Check your inbox for the verification OTP.",
         )
 
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -176,6 +176,73 @@ async def recover_password(email: str, db: AsyncSession = Depends(get_db)) -> An
         site_title=site_config.site_title or "SastoHo",
     )
     return {"msg": "Password recovery email sent"}
+
+@router.post("/send-verification-otp", response_model=dict)
+async def send_verification_otp(
+    email: str = Body(..., embed=True),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """
+    Send OTP for email verification. Always returns success message for security.
+    Used after signup and for resend when user is unverified.
+    """
+    from app.core import email as email_utils
+    from app.core.otp_store import generate_otp, set_otp
+    from app.api.v1.routers.site_config import get_or_create_site_config
+
+    user = await user_service.get_by_email(db, email=email)
+    if user and not user.is_verified:
+        otp = generate_otp(6)
+        await set_otp(email=user.email, otp=otp)
+        site_config = await get_or_create_site_config(db)
+        await email_utils.send_verification_otp_email(
+            email_to=user.email,
+            otp=otp,
+            full_name=user.full_name,
+            logo_url=site_config.logo_url,
+            site_title=site_config.site_title or "SastoHo",
+            expire_minutes=10,
+        )
+    return {"msg": "If your email is registered and unverified, a verification OTP has been sent."}
+
+
+@router.post("/verify-otp", response_model=dict)
+async def verify_otp(
+    email: str = Body(..., embed=True),
+    otp: str = Body(..., embed=True),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """
+    Verify email using OTP sent to user's email.
+    """
+    from app.core.otp_store import get_and_delete_otp
+
+    otp_stored = await get_and_delete_otp(email=email)
+    if not otp_stored or otp_stored != otp.strip():
+        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
+
+    user = await user_service.get_by_email(db, email=email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.is_verified:
+        return {"msg": "Email already verified. You can log in."}
+
+    user.is_verified = True
+    db.add(user)
+    await db.commit()
+    return {"msg": "Email verified successfully. You can now log in."}
+
+
+@router.post("/resend-verification", response_model=dict)
+async def resend_verification_email(
+    email: str = Body(..., embed=True),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """
+    Resend verification OTP. Alias for send-verification-otp.
+    """
+    return await send_verification_otp(email=email, db=db)
+
 
 @router.post("/verify-email", response_model=dict)
 async def verify_email(

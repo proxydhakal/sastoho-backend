@@ -23,10 +23,10 @@ async def create_user(
     user_in: UserCreate,
 ) -> Any:
     """
-    Create new user. Sends verification email; user must verify before logging in.
+    Create new user. Sends OTP to email; user must verify in app before logging in.
     """
     from app.core import email as email_utils
-    from app.core.reset_token import create_verify_email_token
+    from app.core.otp_store import generate_otp, set_otp
     from app.api.v1.routers.site_config import get_or_create_site_config
 
     user = await user_service.get_by_email(db, email=user_in.email)
@@ -36,17 +36,19 @@ async def create_user(
             detail="The user with this email already exists in the system.",
         )
     user = await user_service.create_user(db, user_in=user_in)
-    token = create_verify_email_token(email=user.email)
+    otp = generate_otp(6)
+    await set_otp(email=user.email, otp=otp)
     site_config = await get_or_create_site_config(db)
-    await email_utils.send_verification_email(
+    await email_utils.send_verification_otp_email(
         email_to=user.email,
-        token=token,
+        otp=otp,
         full_name=user.full_name,
         logo_url=site_config.logo_url,
         site_title=site_config.site_title or "SastoHo",
+        expire_minutes=10,
     )
     return {
-        "msg": "Account created. Please check your email to verify your account before logging in.",
+        "msg": "Account created. Please check your email for the verification OTP.",
         "email": user.email,
     }
 

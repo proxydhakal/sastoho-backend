@@ -3,6 +3,7 @@ from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from app.core.config import settings
 from app.core.email_templates import (
     verification_email_html,
+    verification_otp_email_html,
     password_reset_email_html,
     newsletter_welcome_email_html,
     contact_thankyou_email_html,
@@ -63,6 +64,31 @@ async def send_verification_email(
     )
     message = MessageSchema(
         subject="Verify Your Email",
+        recipients=[email_to],
+        body=html,
+        subtype=MessageType.html,
+    )
+    await fastmail.send_message(message)
+
+
+async def send_verification_otp_email(
+    email_to: str,
+    otp: str,
+    full_name: str | None = None,
+    logo_url: str | None = None,
+    site_title: str = "SastoHo",
+    expire_minutes: int = 10,
+) -> None:
+    """Send OTP for email verification (app-based, no link)."""
+    html = verification_otp_email_html(
+        recipient_name=full_name or "Customer",
+        otp=otp,
+        logo_url=_logo_url(logo_url),
+        site_title=site_title,
+        expire_minutes=expire_minutes,
+    )
+    message = MessageSchema(
+        subject="Your Verification Code - SastoHo",
         recipients=[email_to],
         body=html,
         subtype=MessageType.html,
